@@ -82,6 +82,13 @@ class CarSoccerGame extends netplayjs.Game {
     this.players = players || [];
     this.isOnline = players && players.length > 0;
 
+    // Set proper canvas resolution
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = CANVAS_W * dpr;
+    canvas.height = CANVAS_H * dpr;
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+
     this.field = { x: 70, y: 30, w: 820, h: 480 };
     this.goals = {
       left: { x: 50, y: 190, w: 22, h: 160 },
@@ -278,19 +285,33 @@ class CarSoccerGame extends netplayjs.Game {
   draw(canvas) {
     const ctx = canvas.getContext('2d');
     const dpr = window.devicePixelRatio || 1;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    // Reset transform and clear
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Fit the 960x540 game world into the actual canvas while preserving aspect ratio
+    const scaleX = canvas.width / CANVAS_W;
+    const scaleY = canvas.height / CANVAS_H;
+    const scale = Math.min(scaleX, scaleY);
+    const offsetX = (canvas.width - CANVAS_W * scale) / 2;
+    const offsetY = (canvas.height - CANVAS_H * scale) / 2;
+
+    ctx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
 
     const sx = (Math.random() - 0.5) * this.shake;
     const sy = (Math.random() - 0.5) * this.shake;
     ctx.save();
     ctx.translate(sx, sy);
 
+    // Sky / stadium bg
     const sky = ctx.createLinearGradient(0, 0, 0, CANVAS_H);
     sky.addColorStop(0, '#0b1220');
     sky.addColorStop(1, '#1a2740');
     ctx.fillStyle = sky;
     ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
 
+    // Field
     const f = this.field;
     const grass = ctx.createLinearGradient(f.x, f.y, f.x, f.y + f.h);
     grass.addColorStop(0, '#166534');
@@ -299,6 +320,7 @@ class CarSoccerGame extends netplayjs.Game {
     ctx.fillStyle = grass;
     ctx.fillRect(f.x, f.y, f.w, f.h);
 
+    // Mowed stripes
     ctx.globalAlpha = 0.12;
     for (let i = 0; i < 14; i++) {
       ctx.fillStyle = i % 2 === 0 ? '#000' : '#fff';
@@ -306,6 +328,7 @@ class CarSoccerGame extends netplayjs.Game {
     }
     ctx.globalAlpha = 1;
 
+    // Field lines
     ctx.strokeStyle = 'rgba(255,255,255,0.9)';
     ctx.lineWidth = 3;
     ctx.strokeRect(f.x + 2, f.y + 2, f.w - 4, f.h - 4);
@@ -316,9 +339,11 @@ class CarSoccerGame extends netplayjs.Game {
     ctx.beginPath();
     ctx.arc(f.x + f.w / 2, f.y + f.h / 2, 70, 0, Math.PI * 2);
     ctx.stroke();
+    // Penalty areas
     ctx.strokeRect(f.x + 2, f.y + 140, 90, 200);
     ctx.strokeRect(f.x + f.w - 92, f.y + 140, 90, 200);
 
+    // Goals with nets
     ctx.fillStyle = 'rgba(96,165,250,0.2)';
     ctx.fillRect(this.goals.left.x, this.goals.left.y, this.goals.left.w, this.goals.left.h);
     ctx.fillStyle = 'rgba(251,146,60,0.2)';
@@ -344,7 +369,9 @@ class CarSoccerGame extends netplayjs.Game {
       }
     });
 
+    // Cars with more detail
     this.cars.forEach(car => {
+      // Trail
       car.trail.forEach(t => {
         ctx.globalAlpha = t.life / 12 * 0.5;
         ctx.fillStyle = car.team === 0 ? '#60a5fa' : '#fb923c';
@@ -358,11 +385,13 @@ class CarSoccerGame extends netplayjs.Game {
       ctx.translate(car.x, car.y);
       ctx.rotate(car.angle);
 
+      // Shadow
       ctx.fillStyle = 'rgba(0,0,0,0.4)';
       ctx.beginPath();
       ctx.ellipse(3, 6, 20, 11, 0, 0, Math.PI * 2);
       ctx.fill();
 
+      // Body gradient
       const body = ctx.createLinearGradient(-18, 0, 18, 0);
       const c1 = car.team === 0 ? '#1d4ed8' : '#c2410c';
       const c2 = car.team === 0 ? '#60a5fa' : '#fb923c';
@@ -374,20 +403,24 @@ class CarSoccerGame extends netplayjs.Game {
       ctx.roundRect(-18, -10, 36, 20, 5);
       ctx.fill();
 
+      // Roof / cabin
       ctx.fillStyle = 'rgba(255,255,255,0.3)';
       ctx.beginPath();
       ctx.roundRect(-8, -8, 16, 16, 4);
       ctx.fill();
 
+      // Front lights
       ctx.fillStyle = '#fef08a';
       ctx.fillRect(14, -6, 4, 3);
       ctx.fillRect(14, 3, 4, 3);
 
+      // Wheels
       ctx.fillStyle = '#0f172a';
       [[-12, -11], [-12, 6], [6, -11], [6, 6]].forEach(([wx, wy]) => {
         ctx.fillRect(wx, wy, 7, 5);
       });
 
+      // Boost flame
       if (car.boost > 15 && Math.hypot(car.vx, car.vy) > 1.8) {
         const flame = 8 + Math.random() * 10;
         ctx.fillStyle = `rgba(255,200,80,${0.5 + Math.random() * 0.4})`;
@@ -407,10 +440,12 @@ class CarSoccerGame extends netplayjs.Game {
       ctx.restore();
     });
 
+    // Ball with pattern and shadow
     ctx.save();
     ctx.translate(this.ball.x, this.ball.y);
     ctx.rotate(this.ball.spin * 0.05);
 
+    // Shadow
     ctx.fillStyle = 'rgba(0,0,0,0.3)';
     ctx.beginPath();
     ctx.ellipse(2, 4, this.ball.r, this.ball.r * 0.6, 0, 0, Math.PI * 2);
@@ -425,6 +460,7 @@ class CarSoccerGame extends netplayjs.Game {
     ctx.arc(0, 0, this.ball.r, 0, Math.PI * 2);
     ctx.fill();
 
+    // Soccer pattern
     ctx.strokeStyle = '#1f2937';
     ctx.lineWidth = 1.8;
     ctx.beginPath();
@@ -439,6 +475,7 @@ class CarSoccerGame extends netplayjs.Game {
     }
     ctx.restore();
 
+    // Particles
     this.particles.forEach(p => {
       ctx.globalAlpha = Math.max(0, p.life / 40);
       ctx.fillStyle = p.color;
