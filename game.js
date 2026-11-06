@@ -140,6 +140,12 @@ class CarSoccerGame extends netplayjs.Game {
     // Grass texture
     this.grassTex = new Image();
     this.grassTex.src = 'grass-field.png';
+
+    // Stadium assets
+    this.stands = new Image();
+    this.stands.src = 'stands-main.png';
+    this.goalImg = new Image();
+    this.goalImg.src = 'goal.png';
   }
 
   project(worldX, worldY) {
@@ -342,12 +348,21 @@ class CarSoccerGame extends netplayjs.Game {
     ctx.save();
     ctx.translate(sx, sy);
 
+    // Sky
     const sky = ctx.createLinearGradient(0, 0, 0, 120);
     sky.addColorStop(0, '#0b1220');
     sky.addColorStop(1, '#1e3a5f');
     ctx.fillStyle = sky;
     ctx.fillRect(0, 0, CANVAS_W, 120);
 
+    // Stands in the background
+    if (this.stands.complete && this.stands.naturalWidth) {
+      ctx.globalAlpha = 0.92;
+      ctx.drawImage(this.stands, 0, 8, CANVAS_W, 112);
+      ctx.globalAlpha = 1;
+    }
+
+    // Field in perspective (trapezoid)
     const near = this.project(70, 500);
     const far = this.project(70, 60);
     const nearR = this.project(890, 500);
@@ -374,6 +389,7 @@ class CarSoccerGame extends netplayjs.Game {
       ctx.fill();
     }
 
+    // Center line + circle (projected)
     ctx.strokeStyle = 'rgba(255,255,255,0.85)';
     ctx.lineWidth = 2;
     const midFar = this.project(CANVAS_W / 2, 60);
@@ -383,14 +399,22 @@ class CarSoccerGame extends netplayjs.Game {
     ctx.lineTo(midNear.x, midNear.y);
     ctx.stroke();
 
+    // Goals (sprite if available)
     const gL = this.project(50, 280);
     const gR = this.project(910, 280);
-    ctx.strokeStyle = '#60a5fa';
-    ctx.lineWidth = 3;
-    ctx.strokeRect(gL.x - 18, gL.y - 30, 36, 50);
-    ctx.strokeStyle = '#fb923c';
-    ctx.strokeRect(gR.x - 18, gR.y - 30, 36, 50);
+    if (this.goalImg.complete && this.goalImg.naturalWidth) {
+      const gw = 50, gh = 40;
+      ctx.drawImage(this.goalImg, gL.x - gw / 2, gL.y - gh / 2, gw, gh);
+      ctx.drawImage(this.goalImg, gR.x - gw / 2, gR.y - gh / 2, gw, gh);
+    } else {
+      ctx.strokeStyle = '#60a5fa';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(gL.x - 18, gL.y - 30, 36, 50);
+      ctx.strokeStyle = '#fb923c';
+      ctx.strokeRect(gR.x - 18, gR.y - 30, 36, 50);
+    }
 
+    // Draw cars and ball in depth order (far to near)
     const objects = [
       ...this.cars.map(c => ({ type: 'car', obj: c, depth: c.y })),
       { type: 'ball', obj: this.ball, depth: this.ball.y }
