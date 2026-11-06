@@ -148,14 +148,20 @@ class CarSoccerGame extends netplayjs.Game {
     this.goalImg.src = 'goal.png';
   }
 
+  // Camera follows the player car (behind it)
   project(worldX, worldY) {
-    const horizon = 80;
+    const player = this.cars[0];
+    const horizon = 60;
     const vanishX = CANVAS_W / 2;
-    const depth = (worldY - 40) / 500;
-    const scale = 1.4 - depth * 0.9;
-    const screenY = horizon + (CANVAS_H - horizon) * (1 - depth * 0.75);
-    const screenX = vanishX + (worldX - vanishX) * scale * 0.85;
-    return { x: screenX, y: screenY, scale: Math.max(0.25, scale) };
+
+    // Depth relative to the player's position (closer = larger)
+    const relY = (worldY - player.y + 220) / 680;
+    const depth = Math.max(0, Math.min(1.2, relY));
+    const scale = 2.1 - depth * 1.45;
+
+    const screenY = horizon + (CANVAS_H - horizon) * (1 - depth * 0.82);
+    const screenX = vanishX + (worldX - vanishX) * scale * 0.7;
+    return { x: screenX, y: screenY, scale: Math.max(0.28, scale) };
   }
 
   setupInput() {
@@ -362,11 +368,11 @@ class CarSoccerGame extends netplayjs.Game {
       ctx.globalAlpha = 1;
     }
 
-    // Field in perspective (trapezoid)
-    const near = this.project(70, 500);
-    const far = this.project(70, 60);
-    const nearR = this.project(890, 500);
-    const farR = this.project(890, 60);
+    // Field in perspective (longer, goal-to-goal)
+    const near = this.project(40, this.cars[0].y + 180);
+    const far = this.project(40, this.cars[0].y - 420);
+    const nearR = this.project(920, this.cars[0].y + 180);
+    const farR = this.project(920, this.cars[0].y - 420);
 
     ctx.beginPath();
     ctx.moveTo(far.x, far.y);
@@ -427,7 +433,7 @@ class CarSoccerGame extends netplayjs.Game {
         const frame = Math.floor(Math.abs(this.ball.spin) * 0.15) % this.ballSprites.length;
         const img = this.ballSprites[frame];
         if (img && img.complete && img.naturalWidth) {
-          const size = r * 2;
+          const size = r * 2.6;
           ctx.drawImage(img, p.x - size / 2, p.y - size / 2, size, size);
         } else {
           ctx.save();
@@ -454,8 +460,8 @@ class CarSoccerGame extends netplayjs.Game {
         else if (ang < 1.1 || ang > Math.PI * 2 - 1.1) img = sprites.qfront;
 
         if (img && img.complete && img.naturalWidth) {
-          const w = 70 * s;
-          const h = 35 * s;
+          const w = 96 * s;
+          const h = 48 * s;
           ctx.save();
           ctx.translate(p.x, p.y);
           if (Math.cos(car.angle) < 0) ctx.scale(-1, 1);
