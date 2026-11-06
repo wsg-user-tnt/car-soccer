@@ -136,6 +136,10 @@ class CarSoccerGame extends netplayjs.Game {
       'soccer-ball-bottom.png'
     ];
     ballNames.forEach((name, i) => { this.ballSprites[i].src = name; });
+
+    // Grass texture
+    this.grassTex = new Image();
+    this.grassTex.src = 'grass-field.png';
   }
 
   project(worldX, worldY) {
@@ -355,11 +359,20 @@ class CarSoccerGame extends netplayjs.Game {
     ctx.lineTo(nearR.x, nearR.y);
     ctx.lineTo(near.x, near.y);
     ctx.closePath();
-    const grass = ctx.createLinearGradient(0, far.y, 0, near.y);
-    grass.addColorStop(0, '#14532d');
-    grass.addColorStop(1, '#22c55e');
-    ctx.fillStyle = grass;
-    ctx.fill();
+    if (this.grassTex.complete && this.grassTex.naturalWidth) {
+      const pattern = ctx.createPattern(this.grassTex, 'repeat');
+      ctx.fillStyle = pattern;
+      ctx.save();
+      ctx.clip();
+      ctx.fill();
+      ctx.restore();
+    } else {
+      const grass = ctx.createLinearGradient(0, far.y, 0, near.y);
+      grass.addColorStop(0, '#14532d');
+      grass.addColorStop(1, '#22c55e');
+      ctx.fillStyle = grass;
+      ctx.fill();
+    }
 
     ctx.strokeStyle = 'rgba(255,255,255,0.85)';
     ctx.lineWidth = 2;
