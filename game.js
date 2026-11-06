@@ -107,6 +107,18 @@ class CarSoccerGame extends netplayjs.Game {
 
     this.keys = {};
     this.setupInput();
+
+    // Load car sprites
+    this.carSprites = {
+      blue: { side: new Image(), front: new Image(), qfront: new Image() },
+      orange: { side: new Image(), front: new Image(), qfront: new Image() }
+    };
+    this.carSprites.blue.side.src = 'car-blue-side.png';
+    this.carSprites.blue.front.src = 'car-blue-front.png';
+    this.carSprites.blue.qfront.src = 'car-blue-3qfront.png';
+    this.carSprites.orange.side.src = 'car-orange-side.png';
+    this.carSprites.orange.front.src = 'car-orange-front.png';
+    this.carSprites.orange.qfront.src = 'car-orange-3qfront.png';
   }
 
   project(worldX, worldY) {
@@ -377,32 +389,30 @@ class CarSoccerGame extends netplayjs.Game {
         const car = item.obj;
         const p = this.project(car.x, car.y);
         const s = p.scale;
-        ctx.save();
-        ctx.translate(p.x, p.y);
-        ctx.rotate(car.angle * 0.6);
-        ctx.scale(s, s);
+        const team = car.team === 0 ? 'blue' : 'orange';
+        const sprites = this.carSprites[team];
 
-        const body = ctx.createLinearGradient(-16, 0, 16, 0);
-        const c1 = car.team === 0 ? '#1d4ed8' : '#c2410c';
-        const c2 = car.team === 0 ? '#60a5fa' : '#fb923c';
-        body.addColorStop(0, c1);
-        body.addColorStop(0.5, c2);
-        body.addColorStop(1, c1);
-        ctx.fillStyle = body;
-        ctx.beginPath();
-        ctx.roundRect(-16, -8, 32, 16, 4);
-        ctx.fill();
+        let img = sprites.side;
+        const ang = Math.abs((car.angle % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2));
+        if (ang < 0.5 || ang > Math.PI * 2 - 0.5) img = sprites.front;
+        else if (ang < 1.1 || ang > Math.PI * 2 - 1.1) img = sprites.qfront;
 
-        ctx.fillStyle = 'rgba(255,255,255,0.35)';
-        ctx.beginPath();
-        ctx.roundRect(-6, -6, 12, 12, 3);
-        ctx.fill();
-
-        ctx.fillStyle = '#fef08a';
-        ctx.fillRect(12, -4, 3, 2);
-        ctx.fillRect(12, 2, 3, 2);
-
-        ctx.restore();
+        if (img && img.complete && img.naturalWidth) {
+          const w = 70 * s;
+          const h = 35 * s;
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          if (Math.cos(car.angle) < 0) ctx.scale(-1, 1);
+          ctx.drawImage(img, -w / 2, -h / 2, w, h);
+          ctx.restore();
+        } else {
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          ctx.scale(s, s);
+          ctx.fillStyle = car.team === 0 ? '#60a5fa' : '#fb923c';
+          ctx.fillRect(-16, -8, 32, 16);
+          ctx.restore();
+        }
       }
     });
 
