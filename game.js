@@ -119,6 +119,23 @@ class CarSoccerGame extends netplayjs.Game {
     this.carSprites.orange.side.src = 'car-orange-side.png';
     this.carSprites.orange.front.src = 'car-orange-front.png';
     this.carSprites.orange.qfront.src = 'car-orange-3qfront.png';
+
+    // Load ball sprites
+    this.ballSprites = [
+      new Image(), new Image(), new Image(), new Image(),
+      new Image(), new Image(), new Image(), new Image()
+    ];
+    const ballNames = [
+      'soccer-ball-front.png',
+      'soccer-ball-side-right.png',
+      'soccer-ball-3qfront-right.png',
+      'soccer-ball-angled.png',
+      'soccer-ball-side-left.png',
+      'soccer-ball-3qfront-left.png',
+      'soccer-ball-top.png',
+      'soccer-ball-bottom.png'
+    ];
+    ballNames.forEach((name, i) => { this.ballSprites[i].src = name; });
   }
 
   project(worldX, worldY) {
@@ -369,22 +386,24 @@ class CarSoccerGame extends netplayjs.Game {
     objects.forEach(item => {
       if (item.type === 'ball') {
         const p = this.project(this.ball.x, this.ball.y);
-        const r = this.ball.r * p.scale;
-        ctx.save();
-        ctx.translate(p.x, p.y);
-        const ballGrad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, 2, 0, 0, r);
-        ballGrad.addColorStop(0, '#fff');
-        ballGrad.addColorStop(1, '#9ca3af');
-        ctx.fillStyle = ballGrad;
-        ctx.beginPath();
-        ctx.arc(0, 0, r, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#1f2937';
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        ctx.arc(0, 0, r * 0.6, 0, Math.PI * 2);
-        ctx.stroke();
-        ctx.restore();
+        const r = this.ball.r * p.scale * 1.6;
+        const frame = Math.floor(Math.abs(this.ball.spin) * 0.15) % this.ballSprites.length;
+        const img = this.ballSprites[frame];
+        if (img && img.complete && img.naturalWidth) {
+          const size = r * 2;
+          ctx.drawImage(img, p.x - size / 2, p.y - size / 2, size, size);
+        } else {
+          ctx.save();
+          ctx.translate(p.x, p.y);
+          const ballGrad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, 2, 0, 0, r);
+          ballGrad.addColorStop(0, '#fff');
+          ballGrad.addColorStop(1, '#9ca3af');
+          ctx.fillStyle = ballGrad;
+          ctx.beginPath();
+          ctx.arc(0, 0, r, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
       } else {
         const car = item.obj;
         const p = this.project(car.x, car.y);
