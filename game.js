@@ -82,7 +82,6 @@ class CarSoccerGame extends netplayjs.Game {
     this.players = players || [];
     this.isOnline = players && players.length > 0;
 
-    // Set proper canvas resolution
     const dpr = window.devicePixelRatio || 1;
     canvas.width = CANVAS_W * dpr;
     canvas.height = CANVAS_H * dpr;
@@ -108,6 +107,16 @@ class CarSoccerGame extends netplayjs.Game {
 
     this.keys = {};
     this.setupInput();
+  }
+
+  project(worldX, worldY) {
+    const horizon = 80;
+    const vanishX = CANVAS_W / 2;
+    const depth = (worldY - 40) / 500;
+    const scale = 1.4 - depth * 0.9;
+    const screenY = horizon + (CANVAS_H - horizon) * (1 - depth * 0.75);
+    const screenX = vanishX + (worldX - vanishX) * scale * 0.85;
+    return { x: screenX, y: screenY, scale: Math.max(0.25, scale) };
   }
 
   setupInput() {
@@ -138,7 +147,6 @@ class CarSoccerGame extends netplayjs.Game {
         }
       }
 
-      // Smarter AI
       if (!car.isPlayer && !this.isOnline) {
         const dx = this.ball.x - car.x;
         const dy = this.ball.y - car.y;
@@ -286,17 +294,14 @@ class CarSoccerGame extends netplayjs.Game {
     const ctx = canvas.getContext('2d');
     const dpr = window.devicePixelRatio || 1;
 
-    // Reset transform and clear
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Fit the 960x540 game world into the actual canvas while preserving aspect ratio
     const scaleX = canvas.width / CANVAS_W;
     const scaleY = canvas.height / CANVAS_H;
     const scale = Math.min(scaleX, scaleY);
     const offsetX = (canvas.width - CANVAS_W * scale) / 2;
     const offsetY = (canvas.height - CANVAS_H * scale) / 2;
-
     ctx.setTransform(scale, 0, 0, scale, offsetX, offsetY);
 
     const sx = (Math.random() - 0.5) * this.shake;
@@ -304,186 +309,102 @@ class CarSoccerGame extends netplayjs.Game {
     ctx.save();
     ctx.translate(sx, sy);
 
-    // Sky / stadium bg
-    const sky = ctx.createLinearGradient(0, 0, 0, CANVAS_H);
+    const sky = ctx.createLinearGradient(0, 0, 0, 120);
     sky.addColorStop(0, '#0b1220');
-    sky.addColorStop(1, '#1a2740');
+    sky.addColorStop(1, '#1e3a5f');
     ctx.fillStyle = sky;
-    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+    ctx.fillRect(0, 0, CANVAS_W, 120);
 
-    // Field
-    const f = this.field;
-    const grass = ctx.createLinearGradient(f.x, f.y, f.x, f.y + f.h);
-    grass.addColorStop(0, '#166534');
-    grass.addColorStop(0.5, '#22c55e');
-    grass.addColorStop(1, '#15803d');
+    const near = this.project(70, 500);
+    const far = this.project(70, 60);
+    const nearR = this.project(890, 500);
+    const farR = this.project(890, 60);
+
+    ctx.beginPath();
+    ctx.moveTo(far.x, far.y);
+    ctx.lineTo(farR.x, farR.y);
+    ctx.lineTo(nearR.x, nearR.y);
+    ctx.lineTo(near.x, near.y);
+    ctx.closePath();
+    const grass = ctx.createLinearGradient(0, far.y, 0, near.y);
+    grass.addColorStop(0, '#14532d');
+    grass.addColorStop(1, '#22c55e');
     ctx.fillStyle = grass;
-    ctx.fillRect(f.x, f.y, f.w, f.h);
+    ctx.fill();
 
-    // Mowed stripes
-    ctx.globalAlpha = 0.12;
-    for (let i = 0; i < 14; i++) {
-      ctx.fillStyle = i % 2 === 0 ? '#000' : '#fff';
-      ctx.fillRect(f.x, f.y + i * (f.h / 14), f.w, f.h / 14);
-    }
-    ctx.globalAlpha = 1;
-
-    // Field lines
-    ctx.strokeStyle = 'rgba(255,255,255,0.9)';
-    ctx.lineWidth = 3;
-    ctx.strokeRect(f.x + 2, f.y + 2, f.w - 4, f.h - 4);
+    ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+    ctx.lineWidth = 2;
+    const midFar = this.project(CANVAS_W / 2, 60);
+    const midNear = this.project(CANVAS_W / 2, 500);
     ctx.beginPath();
-    ctx.moveTo(f.x + f.w / 2, f.y);
-    ctx.lineTo(f.x + f.w / 2, f.y + f.h);
+    ctx.moveTo(midFar.x, midFar.y);
+    ctx.lineTo(midNear.x, midNear.y);
     ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(f.x + f.w / 2, f.y + f.h / 2, 70, 0, Math.PI * 2);
-    ctx.stroke();
-    // Penalty areas
-    ctx.strokeRect(f.x + 2, f.y + 140, 90, 200);
-    ctx.strokeRect(f.x + f.w - 92, f.y + 140, 90, 200);
 
-    // Goals with nets
-    ctx.fillStyle = 'rgba(96,165,250,0.2)';
-    ctx.fillRect(this.goals.left.x, this.goals.left.y, this.goals.left.w, this.goals.left.h);
-    ctx.fillStyle = 'rgba(251,146,60,0.2)';
-    ctx.fillRect(this.goals.right.x, this.goals.right.y, this.goals.right.w, this.goals.right.h);
-    ctx.lineWidth = 4;
+    const gL = this.project(50, 280);
+    const gR = this.project(910, 280);
     ctx.strokeStyle = '#60a5fa';
-    ctx.strokeRect(this.goals.left.x, this.goals.left.y, this.goals.left.w, this.goals.left.h);
+    ctx.lineWidth = 3;
+    ctx.strokeRect(gL.x - 18, gL.y - 30, 36, 50);
     ctx.strokeStyle = '#fb923c';
-    ctx.strokeRect(this.goals.right.x, this.goals.right.y, this.goals.right.w, this.goals.right.h);
+    ctx.strokeRect(gR.x - 18, gR.y - 30, 36, 50);
 
-    ctx.strokeStyle = 'rgba(255,255,255,0.4)';
-    ctx.lineWidth = 1;
-    [this.goals.left, this.goals.right].forEach(g => {
-      for (let i = 1; i < 6; i++) {
+    const objects = [
+      ...this.cars.map(c => ({ type: 'car', obj: c, depth: c.y })),
+      { type: 'ball', obj: this.ball, depth: this.ball.y }
+    ].sort((a, b) => a.depth - b.depth);
+
+    objects.forEach(item => {
+      if (item.type === 'ball') {
+        const p = this.project(this.ball.x, this.ball.y);
+        const r = this.ball.r * p.scale;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        const ballGrad = ctx.createRadialGradient(-r * 0.3, -r * 0.3, 2, 0, 0, r);
+        ballGrad.addColorStop(0, '#fff');
+        ballGrad.addColorStop(1, '#9ca3af');
+        ctx.fillStyle = ballGrad;
         ctx.beginPath();
-        ctx.moveTo(g.x, g.y + (g.h / 6) * i);
-        ctx.lineTo(g.x + g.w, g.y + (g.h / 6) * i);
-        ctx.stroke();
+        ctx.arc(0, 0, r, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#1f2937';
+        ctx.lineWidth = 1.5;
         ctx.beginPath();
-        ctx.moveTo(g.x + (g.w / 4) * (i % 3), g.y);
-        ctx.lineTo(g.x + (g.w / 4) * (i % 3), g.y + g.h);
+        ctx.arc(0, 0, r * 0.6, 0, Math.PI * 2);
         ctx.stroke();
+        ctx.restore();
+      } else {
+        const car = item.obj;
+        const p = this.project(car.x, car.y);
+        const s = p.scale;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(car.angle * 0.6);
+        ctx.scale(s, s);
+
+        const body = ctx.createLinearGradient(-16, 0, 16, 0);
+        const c1 = car.team === 0 ? '#1d4ed8' : '#c2410c';
+        const c2 = car.team === 0 ? '#60a5fa' : '#fb923c';
+        body.addColorStop(0, c1);
+        body.addColorStop(0.5, c2);
+        body.addColorStop(1, c1);
+        ctx.fillStyle = body;
+        ctx.beginPath();
+        ctx.roundRect(-16, -8, 32, 16, 4);
+        ctx.fill();
+
+        ctx.fillStyle = 'rgba(255,255,255,0.35)';
+        ctx.beginPath();
+        ctx.roundRect(-6, -6, 12, 12, 3);
+        ctx.fill();
+
+        ctx.fillStyle = '#fef08a';
+        ctx.fillRect(12, -4, 3, 2);
+        ctx.fillRect(12, 2, 3, 2);
+
+        ctx.restore();
       }
     });
-
-    // Cars with more detail
-    this.cars.forEach(car => {
-      // Trail
-      car.trail.forEach(t => {
-        ctx.globalAlpha = t.life / 12 * 0.5;
-        ctx.fillStyle = car.team === 0 ? '#60a5fa' : '#fb923c';
-        ctx.beginPath();
-        ctx.arc(t.x, t.y, 4, 0, Math.PI * 2);
-        ctx.fill();
-      });
-      ctx.globalAlpha = 1;
-
-      ctx.save();
-      ctx.translate(car.x, car.y);
-      ctx.rotate(car.angle);
-
-      // Shadow
-      ctx.fillStyle = 'rgba(0,0,0,0.4)';
-      ctx.beginPath();
-      ctx.ellipse(3, 6, 20, 11, 0, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Body gradient
-      const body = ctx.createLinearGradient(-18, 0, 18, 0);
-      const c1 = car.team === 0 ? '#1d4ed8' : '#c2410c';
-      const c2 = car.team === 0 ? '#60a5fa' : '#fb923c';
-      body.addColorStop(0, c1);
-      body.addColorStop(0.5, c2);
-      body.addColorStop(1, c1);
-      ctx.fillStyle = body;
-      ctx.beginPath();
-      ctx.roundRect(-18, -10, 36, 20, 5);
-      ctx.fill();
-
-      // Roof / cabin
-      ctx.fillStyle = 'rgba(255,255,255,0.3)';
-      ctx.beginPath();
-      ctx.roundRect(-8, -8, 16, 16, 4);
-      ctx.fill();
-
-      // Front lights
-      ctx.fillStyle = '#fef08a';
-      ctx.fillRect(14, -6, 4, 3);
-      ctx.fillRect(14, 3, 4, 3);
-
-      // Wheels
-      ctx.fillStyle = '#0f172a';
-      [[-12, -11], [-12, 6], [6, -11], [6, 6]].forEach(([wx, wy]) => {
-        ctx.fillRect(wx, wy, 7, 5);
-      });
-
-      // Boost flame
-      if (car.boost > 15 && Math.hypot(car.vx, car.vy) > 1.8) {
-        const flame = 8 + Math.random() * 10;
-        ctx.fillStyle = `rgba(255,200,80,${0.5 + Math.random() * 0.4})`;
-        ctx.beginPath();
-        ctx.moveTo(-18, -4);
-        ctx.lineTo(-18 - flame, 0);
-        ctx.lineTo(-18, 4);
-        ctx.fill();
-        ctx.fillStyle = `rgba(255,100,40,${0.3 + Math.random() * 0.3})`;
-        ctx.beginPath();
-        ctx.moveTo(-18, -2);
-        ctx.lineTo(-18 - flame * 0.6, 0);
-        ctx.lineTo(-18, 2);
-        ctx.fill();
-      }
-
-      ctx.restore();
-    });
-
-    // Ball with pattern and shadow
-    ctx.save();
-    ctx.translate(this.ball.x, this.ball.y);
-    ctx.rotate(this.ball.spin * 0.05);
-
-    // Shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.3)';
-    ctx.beginPath();
-    ctx.ellipse(2, 4, this.ball.r, this.ball.r * 0.6, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    const ballGrad = ctx.createRadialGradient(-5, -5, 3, 0, 0, this.ball.r);
-    ballGrad.addColorStop(0, '#ffffff');
-    ballGrad.addColorStop(0.7, '#e5e7eb');
-    ballGrad.addColorStop(1, '#9ca3af');
-    ctx.fillStyle = ballGrad;
-    ctx.beginPath();
-    ctx.arc(0, 0, this.ball.r, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Soccer pattern
-    ctx.strokeStyle = '#1f2937';
-    ctx.lineWidth = 1.8;
-    ctx.beginPath();
-    ctx.arc(0, 0, this.ball.r * 0.6, 0, Math.PI * 2);
-    ctx.stroke();
-    for (let i = 0; i < 6; i++) {
-      const a = (i / 6) * Math.PI * 2 + this.ball.spin * 0.02;
-      ctx.beginPath();
-      ctx.moveTo(Math.cos(a) * this.ball.r * 0.3, Math.sin(a) * this.ball.r * 0.3);
-      ctx.lineTo(Math.cos(a) * this.ball.r * 0.95, Math.sin(a) * this.ball.r * 0.95);
-      ctx.stroke();
-    }
-    ctx.restore();
-
-    // Particles
-    this.particles.forEach(p => {
-      ctx.globalAlpha = Math.max(0, p.life / 40);
-      ctx.fillStyle = p.color;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-      ctx.fill();
-    });
-    ctx.globalAlpha = 1;
 
     ctx.restore();
   }
