@@ -88,16 +88,16 @@ class CarSoccerGame extends netplayjs.Game {
     canvas.style.width = '100%';
     canvas.style.height = '100%';
 
-    this.field = { x: 70, y: 30, w: 820, h: 480 };
+    this.field = { x: 80, y: -400, w: 800, h: 1200 };
     this.goals = {
-      left: { x: 50, y: 190, w: 22, h: 160 },
-      right: { x: 888, y: 190, w: 22, h: 160 }
+      left: { x: 40, y: 200, w: 22, h: 160 },
+      right: { x: 898, y: 200, w: 22, h: 160 }
     };
 
-    this.ball = { x: CANVAS_W / 2, y: CANVAS_H / 2, vx: 0, vy: 0, r: 16, spin: 0 };
+    this.ball = { x: CANVAS_W / 2, y: 200, vx: 0, vy: 0, r: 16, spin: 0 };
     this.cars = [
-      { x: 240, y: CANVAS_H / 2, angle: 0, vx: 0, vy: 0, team: 0, boost: 100, isPlayer: true, trail: [] },
-      { x: 720, y: CANVAS_H / 2, angle: Math.PI, vx: 0, vy: 0, team: 1, boost: 100, isPlayer: false, trail: [] }
+      { x: 240, y: 400, angle: 0, vx: 0, vy: 0, team: 0, boost: 100, isPlayer: true, trail: [] },
+      { x: 720, y: 0, angle: Math.PI, vx: 0, vy: 0, team: 1, boost: 100, isPlayer: false, trail: [] }
     ];
     this.score = [0, 0];
     this.particles = [];
@@ -148,20 +148,19 @@ class CarSoccerGame extends netplayjs.Game {
     this.goalImg.src = 'goal.png';
   }
 
-  // Camera follows the player car (behind it)
+  // Camera follows the player car (behind it) — longer field
   project(worldX, worldY) {
     const player = this.cars[0];
-    const horizon = 60;
+    const horizon = 50;
     const vanishX = CANVAS_W / 2;
 
-    // Depth relative to the player's position (closer = larger)
-    const relY = (worldY - player.y + 220) / 680;
-    const depth = Math.max(0, Math.min(1.2, relY));
-    const scale = 2.1 - depth * 1.45;
+    const relY = (worldY - player.y + 280) / 1100;
+    const depth = Math.max(0, Math.min(1.4, relY));
+    const scale = 2.4 - depth * 1.7;
 
-    const screenY = horizon + (CANVAS_H - horizon) * (1 - depth * 0.82);
-    const screenX = vanishX + (worldX - vanishX) * scale * 0.7;
-    return { x: screenX, y: screenY, scale: Math.max(0.28, scale) };
+    const screenY = horizon + (CANVAS_H - horizon) * (1 - depth * 0.86);
+    const screenX = vanishX + (worldX - vanishX) * scale * 0.65;
+    return { x: screenX, y: screenY, scale: Math.max(0.22, scale) };
   }
 
   setupInput() {
@@ -234,7 +233,8 @@ class CarSoccerGame extends netplayjs.Game {
       }
       car.trail = car.trail.filter(t => { t.life--; return t.life > 0; });
 
-      const margin = 24;
+      // Walls (longer field)
+      const margin = 30;
       if (car.x < this.field.x + margin) { car.x = this.field.x + margin; car.vx *= -0.35; }
       if (car.x > this.field.x + this.field.w - margin) { car.x = this.field.x + this.field.w - margin; car.vx *= -0.35; }
       if (car.y < this.field.y + margin) { car.y = this.field.y + margin; car.vy *= -0.35; }
@@ -314,7 +314,7 @@ class CarSoccerGame extends netplayjs.Game {
 
   resetBall() {
     this.ball.x = CANVAS_W / 2;
-    this.ball.y = CANVAS_H / 2;
+    this.ball.y = 200;
     this.ball.vx = (Math.random() - 0.5) * 2;
     this.ball.vy = (Math.random() - 0.5) * 2;
     this.ball.spin = 0;
@@ -369,10 +369,10 @@ class CarSoccerGame extends netplayjs.Game {
     }
 
     // Field in perspective (longer, goal-to-goal)
-    const near = this.project(40, this.cars[0].y + 180);
-    const far = this.project(40, this.cars[0].y - 420);
-    const nearR = this.project(920, this.cars[0].y + 180);
-    const farR = this.project(920, this.cars[0].y - 420);
+    const near = this.project(60, this.cars[0].y + 260);
+    const far = this.project(60, this.cars[0].y - 720);
+    const nearR = this.project(900, this.cars[0].y + 260);
+    const farR = this.project(900, this.cars[0].y - 720);
 
     ctx.beginPath();
     ctx.moveTo(far.x, far.y);
